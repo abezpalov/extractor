@@ -15,15 +15,46 @@ class PDFManager(models.Manager):
 
         pdf = PDF()
         pdf.title = f.name
-
-        # TODO Установить проверку на соответствеие pdf
-
-        # Сохраняем PDF-файл
-        pdf.file.save('{}/{}'.format(pdf.id, f.name), f)
         pdf.save()
 
-        # Устанавливаем права доступа к файлу
-        os.chmod(pdf.filename, 0o755)
+        # TODO Установить проверку на соответствеие pdf
+        # *.pdf, *.xps, *.oxps, *.cbz, *.fb2 or *.epub
+        if f.name.endswith('.pdf'):
+            # Сохраняем PDF-файл
+            pdf.file.save('{}/{}'.format(pdf.id, f.name), f)
+            pdf.save()
+            os.chmod(pdf.filename, 0o755)
+
+        elif f.name.endswith('.xps') or f.name.endswith('.cbz') or f.name.endswith('.fb2') \
+            or f.name.endswith('.oxps') or f.name.endswith('.epub'):
+
+            # Сохраняем временный файл
+            # Создаём запись в базе
+            data = ExtractedData(pdf=pdf)
+            data.title = f.name
+
+            # Сохраняем исходный файл
+            data.file.save('{}/{}'.format(pdf.id, data.title), f)
+            data.save()
+            os.chmod(data.filename, 0o755)
+
+            # Открываем временный файл
+            if f.name.endswith('.xps') or f.name.endswith('.cbz') or f.name.endswith('.fb2'):
+                filename = '{}/{}.pdf'.format(pdf.id, f.name[:-4])
+                pdf.title = '{}.pdf'.format(pdf.title[:-4])
+            elif f.name.endswith('.oxps') or f.name.endswith('.epub'):
+                filename = '{}/{}.pdf'.format(pdf.id, f.name[:-5])
+                pdf.title = '{}.pdf'.format(pdf.title[:-5])
+
+
+            doc = fitz.open(data.filename)
+            pdfbytes = doc.convertToPDF()
+            f = io.BytesIO()
+            f.write(pdfbytes)
+            pdf.file.save(filename, f) # TODO
+            pdf.save()
+            os.chmod(pdf.filename, 0o755)
+
 
         # TODO Извлекаем данные
         pdf.extract_meta()
