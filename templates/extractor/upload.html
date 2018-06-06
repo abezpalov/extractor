@@ -1,0 +1,15 @@
+<form action="/extractor/" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form }}
+    <input type="submit" value="Submit" />
+</form>
+
+<ul>
+{% if pdf %}
+<li><a href="{{pdf.file.url}}">{{pdf.title}}</a>
+{% endif %}
+
+{% for data in datas %}
+<li><a href="{{data.file.url}}">{{data.title}}</a>
+{% endfor %}
+</ul>
